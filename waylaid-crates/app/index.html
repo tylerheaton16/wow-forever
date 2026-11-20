@@ -294,8 +294,11 @@ TIERS.forEach((tname, t) => {
         <div class="crate-name">${esc(crateName(r.id))}</div>
         <div class="crate-price">${r.cratePrice ? money(r.cratePrice.v) : money(null)}</div>
         <div class="crate-meta">${r.cratePrice ? "crate on AH · " + r.cratePrice.src : "crate not listed"}</div>
-        <div class="favor">${r.favor} Favor <small>on turn-in</small></div>
-        <div class="cpf">${r.allIn != null ? "all-in " + money(r.allIn) + " − " + money(r.rebate) + " back = " + money(r.net) + " · <b>" + money(Math.round(r.netCpf)) + "</b>/Favor net" : ""}</div>
+        <div class="favor">${r.favor} Favor + ${money(r.rebate)} <small>on turn-in</small></div>
+        ${r.allIn != null ? `
+        <div class="cpf">total cost <small>(crate + cheapest fill)</small>: <b>${money(r.allIn)}</b></div>
+        <div class="cpf">silver rebate: <b>${money(r.rebate)}</b></div>
+        <div class="cpf">net cost: <b>${money(r.net)}</b> · <b>${money(Math.round(r.netCpf))}</b>/Favor</div>` : ""}
       </div>
       <div class="fills">${fillsHtml}</div>`;
     sec.appendChild(div);
