@@ -1,0 +1,32 @@
+name: Refresh AH prices
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"   # every 6 hours (TSM realm data updates every few hours)
+  workflow_dispatch: {}       # manual "Run workflow" button
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Regenerate prices.js from TSM public data
+        run: ./refresh-prices.sh
+
+      - name: Commit if prices changed
+        run: |
+          git config user.name "price-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --quiet prices.js; then
+            git add prices.js
+            git commit -m "Refresh AH prices"
+            git push
+          else
+            echo "No price changes."
+          fi

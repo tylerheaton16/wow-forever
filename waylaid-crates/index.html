@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waylaid Crates — Horde Normal</title>
+<style>
+  :root {
+    --bg: #15120d;
+    --panel: #1f1a12;
+    --panel2: #272014;
+    --border: #3a3122;
+    --text: #e8ddc5;
+    --muted: #9c8f72;
+    --gold: #ffd100;
+    --silver: #c7c7c7;
+    --copper: #d08a55;
+    --green: #1eff00;
+    --white-q: #ffffff;
+    --accent: #c8a24a;
+    --best: #2d4a1e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.45 "Segoe UI", system-ui, sans-serif;
+    padding: 24px clamp(12px, 3vw, 40px) 60px;
+  }
+  header { max-width: 1200px; margin: 0 auto 10px; }
+  h1 { font-size: 26px; margin: 0 0 4px; color: var(--accent); letter-spacing: .5px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .sub b { color: var(--text); font-weight: 600; }
+  .note {
+    max-width: 1200px; margin: 14px auto 26px; padding: 10px 14px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--muted); font-size: 13px;
+  }
+  .note code { color: var(--text); background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+
+  .tier { max-width: 1200px; margin: 0 auto 8px; }
+  .tier > h2 {
+    font-size: 17px; color: var(--accent); margin: 26px 0 10px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+  .crate-row {
+    display: flex; gap: 14px; align-items: stretch;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .crate-card {
+    flex: 0 0 250px; display: flex; flex-direction: column; gap: 6px;
+    border-right: 1px solid var(--border); padding-right: 14px;
+  }
+  .crate-name { font-weight: 700; font-size: 15px; }
+  .q-white .crate-name { color: var(--white-q); }
+  .q-green .crate-name { color: var(--green); }
+  .crate-price { font-size: 14px; }
+  .crate-meta { color: var(--muted); font-size: 12.5px; }
+  .favor {
+    margin-top: auto; align-self: flex-start;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 9px; font-size: 13px; color: var(--gold); font-weight: 600;
+  }
+  .favor small { color: var(--muted); font-weight: 400; }
+  .cpf { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .cpf b { color: var(--text); }
+
+  .fills { flex: 1; display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; }
+  .fill {
+    flex: 1 1 195px; max-width: 260px;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 11px; position: relative;
+  }
+  .fill.best { background: var(--best); border-color: #4e7a34; }
+  .fill.best::after {
+    content: "cheapest"; position: absolute; top: 7px; right: 9px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--green);
+  }
+  .fill-name { font-weight: 600; font-size: 13.5px; color: var(--white-q); padding-right: 8px; }
+  .fill-qty { color: var(--muted); font-size: 12.5px; margin: 2px 0 6px; }
+  .fill-total { font-size: 14px; }
+  .fill-unit { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .money .g { color: var(--gold); }
+  .money .s { color: var(--silver); }
+  .money .c { color: var(--copper); }
+  .money.na { color: var(--muted); font-style: italic; }
+
+  table.summary {
+    width: 100%; max-width: 1200px; margin: 0 auto; border-collapse: collapse;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    font-size: 13.5px;
+  }
+  .summary-wrap { max-width: 1200px; margin: 0 auto 10px; overflow-x: auto; }
+  table.summary th, table.summary td { padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  table.summary th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  table.summary tr:last-child td { border-bottom: none; }
+  table.summary td.rank { color: var(--muted); width: 30px; }
+  details { max-width: 1200px; margin: 0 auto 18px; }
+  details summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 15px; padding: 6px 0; }
+  footer { max-width: 1200px; margin: 30px auto 0; color: var(--muted); font-size: 12px; }
+  footer a { color: var(--accent); }
+  @media (max-width: 760px) {
+    .crate-row { flex-direction: column; }
+    .crate-card { flex-basis: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 0 0 10px; }
+    .favor { margin-top: 6px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Waylaid Crates — Merchant's Favor Planner</h1>
+  <div class="sub" id="meta">Loading price data…</div>
+</header>
+
+<div class="note">
+  Each crate is bought empty off the auction house, filled with <b>one</b> of the item options shown
+  beside it, then turned in to Dokimi at Durotar Supply &amp; Logistics for <b>Merchant's Favor</b>.
+  Gathered-goods crates (Herbs, Ore, Textiles, Curiosities) are common quality and pay
+  5 / 10 / 15 / 20 Favor by tier; crafted-goods crates (Ingots, Fabrics, Parts) are uncommon and pay
+  10 / 20 / 30 / 40. Expert and Artisan payouts are community-reported, not yet officially confirmed.
+  Prices are minimum buyout (market value as fallback, shown in grey). Refresh with
+  <code>./refresh-prices.sh</code>.
+</div>
+
+<details open>
+  <summary>Reputation planner: Notarized Shipping Containers</summary>
+  <div class="note" style="margin:10px 0">
+    From <b>Friendly</b>, Kurvelk Shadowhoof sells the <b>Forged Delivery Receipt</b> for
+    <b>15 Merchant's Favor</b>. Affix it to any <b>empty</b> Waylaid Crate to make a
+    Notarized Shipping Container, worth <b>50 reputation</b> when handed to Dokimi.
+    This planner buys the cheapest empty crate on the AH for each box, and generates the
+    Favor by buying + filling + turning in the best gold-per-Favor crate from the table below.
+    <div style="margin-top:8px">
+      Current rep: <input type="number" id="repNow" value="3000" min="0" max="42000" step="50"
+        style="width:90px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 6px">
+      <label style="margin-left:14px"><input type="checkbox" id="labelQuest">
+        count one-time Shipping Label quest (+2,000 rep)</label>
+    </div>
+  </div>
+  <div class="summary-wrap"><table class="summary" id="repPlan"></table></div>
+  <div class="note" id="repStrategy" style="margin:10px 0"></div>
+</details>
+
+<details open>
+  <summary>Best value: gold per Favor (crate + cheapest fill)</summary>
+  <div class="summary-wrap"><table class="summary" id="summary"></table></div>
+</details>
+
+<div id="app"></div>
+
+<footer>
+  Prices from <a href="https://tradeskillmaster.com/public-data">TradeSkillMaster public data</a>
+  (WoW Forever · US · Normal ruleset · Horde). Crate requirements per community guides; quantities
+  may shift after launch patches.
+</footer>
+
+<script src="prices.js"></script>
+<script>
+// ---- Static game knowledge: crate -> fill options (any ONE option fills the crate) ----
+// favor: [white gathered, green crafted] by tier A/J/E/Art = 5/10/15/20 and 10/20/30/40.
+const TIERS = ["Apprentice", "Journeyman", "Expert", "Artisan"];
+const CRATES = [
+  // --- Apprentice ---
+  { id: 248682, tier: 0, q: "white", favor: 5,  fills: [[2447,20],[765,20],[2449,10],[785,10],[2450,10]] },
+  { id: 248683, tier: 0, q: "white", favor: 5,  fills: [[2770,20],[2771,20]] },
+  { id: 248684, tier: 0, q: "white", favor: 5,  fills: [[2589,40],[2318,20]] },
+  { id: 248685, tier: 0, q: "white", favor: 5,  fills: [[10940,20],[10939,4],[10978,6],[11084,2]] },
+  { id: 248703, tier: 0, q: "green", favor: 10, fills: [[2840,20],[3576,20],[2841,10]] },
+  { id: 248702, tier: 0, q: "green", favor: 10, fills: [[2996,20],[4231,2]] },
+  { id: 248704, tier: 0, q: "green", favor: 10, fills: [[4359,16],[4361,16],[4363,4]] },
+  // --- Journeyman ---
+  { id: 248686, tier: 1, q: "white", favor: 10, fills: [[3820,10],[2453,10],[3355,10],[3369,10],[3356,10]] },
+  { id: 248687, tier: 1, q: "white", favor: 10, fills: [[2775,10],[2772,20]] },
+  { id: 248688, tier: 1, q: "white", favor: 10, fills: [[2592,20],[4306,40],[2319,20]] },
+  { id: 248689, tier: 1, q: "white", favor: 10, fills: [[11083,20],[11082,4],[11138,6],[11139,2]] },
+  { id: 248706, tier: 1, q: "green", favor: 20, fills: [[2842,10],[3575,20]] },
+  { id: 248705, tier: 1, q: "green", favor: 20, fills: [[2997,6],[4305,10],[4233,2]] },
+  { id: 248707, tier: 1, q: "green", favor: 20, fills: [[4371,8],[4375,7],[4382,4],[10558,45]] },
+  // --- Expert ---
+  { id: 248690, tier: 2, q: "white", favor: 15, fills: [[3357,20],[3818,10],[3821,10],[3358,10]] },
+  { id: 248691, tier: 2, q: "white", favor: 15, fills: [[3819,10],[4625,10],[8836,10],[8831,20]] },
+  { id: 248692, tier: 2, q: "white", favor: 15, fills: [[2776,10],[3858,20]] },
+  { id: 248693, tier: 2, q: "white", favor: 15, fills: [[4338,40],[4234,20]] },
+  { id: 248694, tier: 2, q: "white", favor: 15, fills: [[11137,20],[11135,4],[11177,6],[11178,2]] },
+  { id: 248709, tier: 2, q: "green", favor: 30, fills: [[3860,20],[3859,15],[3577,10]] },
+  { id: 248708, tier: 2, q: "green", favor: 30, fills: [[4339,8],[4236,2]] },
+  { id: 248710, tier: 2, q: "green", favor: 30, fills: [[4387,8],[10559,5],[10561,5],[10560,12]] },
+  // --- Artisan ---
+  { id: 248695, tier: 3, q: "white", favor: 20, fills: [[13464,10],[8838,20],[8839,10],[8845,10],[8846,10]] },
+  { id: 248696, tier: 3, q: "white", favor: 20, fills: [[13463,20],[13465,20],[13466,20],[13467,20]] },
+  { id: 248697, tier: 3, q: "white", favor: 20, fills: [[7911,10],[10620,20],[11370,20]] },
+  { id: 248698, tier: 3, q: "white", favor: 20, fills: [[14047,40],[4304,20],[8170,20]] },
+  { id: 248699, tier: 3, q: "white", favor: 20, fills: [[11176,20],[11175,4],[14343,6],[14344,2]] },
+  { id: 248712, tier: 3, q: "green", favor: 40, fills: [[6037,10],[12359,20],[11371,2]] },
+  { id: 248711, tier: 3, q: "green", favor: 40, fills: [[14048,8],[8172,2]] },
+  { id: 248713, tier: 3, q: "green", favor: 40, fills: [[15994,5],[18631,5],[16000,2]] },
+];
+const UNCONFIRMED_TIERS = [2, 3]; // Expert & Artisan Favor values community-reported
+
+// ---- Helpers ----
+const P = window.PRICES || {};
+function price(id) { // effective price in copper: min buyout, else market value
+  const r = P[id];
+  if (!r) return null;
+  if (r.min > 0) return { v: r.min, src: "min buyout" };
+  if (r.mv > 0) return { v: r.mv, src: "market value" };
+  return null;
+}
+function money(copper, cls) {
+  if (copper == null) return '<span class="money na">no data</span>';
+  const g = Math.floor(copper / 10000), s = Math.floor(copper % 10000 / 100), c = Math.floor(copper % 100);
+  let out = "";
+  if (g) out += `<span class="g">${g.toLocaleString()}g</span> `;
+  if (g || s) out += `<span class="s">${s}s</span> `;
+  out += `<span class="c">${c}c</span>`;
+  return `<span class="money ${cls || ""}">${out}</span>`;
+}
+function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+function crateName(id) { return P[id] ? P[id].name : `Item ${id}`; }
+
+// ---- Compute ----
+const rows = CRATES.map(cr => {
+  const cratePrice = price(cr.id);
+  const fills = cr.fills.map(([fid, qty]) => {
+    const p = price(fid);
+    return { id: fid, qty, unit: p, total: p ? p.v * qty : null };
+  });
+  const priced = fills.filter(f => f.total != null);
+  const cheapest = priced.length ? priced.reduce((a, b) => a.total <= b.total ? a : b) : null;
+  const allIn = (cratePrice && cheapest) ? cratePrice.v + cheapest.total : null;
+  return { ...cr, cratePrice, fills, cheapest, allIn, cpf: allIn != null ? allIn / cr.favor : null };
+});
+
+// ---- Render summary (gold per favor, ascending) ----
+const sorted = rows.filter(r => r.cpf != null).sort((a, b) => a.cpf - b.cpf);
+document.getElementById("summary").innerHTML =
+  `<tr><th></th><th>Crate</th><th>Favor</th><th>Cheapest fill</th><th>All-in cost</th><th>Cost / Favor</th></tr>` +
+  sorted.map((r, i) => `<tr>
+    <td class="rank">${i + 1}</td>
+    <td style="color:${r.q === "green" ? "var(--green)" : "var(--white-q)"}">${esc(crateName(r.id))}</td>
+    <td>${r.favor}${UNCONFIRMED_TIERS.includes(r.tier) ? "*" : ""}</td>
+    <td>${r.cheapest ? esc(crateName(r.cheapest.id)) + " ×" + r.cheapest.qty : "—"}</td>
+    <td>${money(r.allIn)}</td>
+    <td><b>${money(Math.round(r.cpf))}</b></td>
+  </tr>`).join("");
+
+// ---- Render crate rows by tier ----
+const app = document.getElementById("app");
+TIERS.forEach((tname, t) => {
+  const sec = document.createElement("section");
+  sec.className = "tier";
+  sec.innerHTML = `<h2>${tname}${UNCONFIRMED_TIERS.includes(t) ? " <small style='color:var(--muted);font-weight:400'>(Favor values unconfirmed)</small>" : ""}</h2>`;
+  rows.filter(r => r.tier === t).forEach(r => {
+    const div = document.createElement("div");
+    div.className = `crate-row q-${r.q}`;
+    const fillsHtml = r.fills.map(f => `
+      <div class="fill ${r.cheapest && f.id === r.cheapest.id ? "best" : ""}">
+        <div class="fill-name">${esc(crateName(f.id))}</div>
+        <div class="fill-qty">needs ×${f.qty}</div>
+        <div class="fill-total">${money(f.total)}</div>
+        <div class="fill-unit">${f.unit ? money(f.unit.v) + " each · " + f.unit.src : ""}</div>
+      </div>`).join("");
+    div.innerHTML = `
+      <div class="crate-card">
+        <div class="crate-name">${esc(crateName(r.id))}</div>
+        <div class="crate-price">${r.cratePrice ? money(r.cratePrice.v) : money(null)}</div>
+        <div class="crate-meta">${r.cratePrice ? "crate on AH · " + r.cratePrice.src : "crate not listed"}</div>
+        <div class="favor">${r.favor} Favor <small>on turn-in</small></div>
+        <div class="cpf">${r.allIn != null ? "all-in " + money(r.allIn) + " · <b>" + money(Math.round(r.cpf)) + "</b>/Favor" : ""}</div>
+      </div>
+      <div class="fills">${fillsHtml}</div>`;
+    sec.appendChild(div);
+  });
+  app.appendChild(sec);
+});
+
+// ---- Reputation planner ----
+// Cumulative rep from Neutral 0: Friendly 3000, Honored 9000, Revered 21000, Exalted 42000.
+// Each Notarized Shipping Container = 1 empty crate + 1 Forged Delivery Receipt (15 Favor) = 50 rep.
+const REP_TARGETS = [["Honored", 9000], ["Revered", 21000], ["Exalted", 42000]];
+const REP_PER_BOX = 50, FAVOR_PER_BOX = 15;
+
+function renderRepPlan() {
+  const emptiest = rows.filter(r => r.cratePrice)
+    .reduce((a, b) => a.cratePrice.v <= b.cratePrice.v ? a : b, rows.find(r => r.cratePrice));
+  const favorCrate = sorted[0]; // best gold-per-Favor (crate + cheapest fill, turned in)
+  if (!emptiest || !favorCrate) {
+    document.getElementById("repPlan").innerHTML = "<tr><td>No price data.</td></tr>";
+    return;
+  }
+  let repNow = Math.max(0, Number(document.getElementById("repNow").value) || 0);
+  if (document.getElementById("labelQuest").checked) repNow += 2000;
+
+  const rowsHtml = REP_TARGETS.map(([name, target]) => {
+    const need = Math.max(0, target - repNow);
+    const boxes = Math.ceil(need / REP_PER_BOX);
+    const favor = boxes * FAVOR_PER_BOX;
+    const turnins = Math.ceil(favor / favorCrate.favor);
+    const favorCost = turnins * favorCrate.allIn;
+    const boxCost = boxes * emptiest.cratePrice.v;
+    const total = boxCost + favorCost;
+    return `<tr>
+      <td><b>${name}</b> <span style="color:var(--muted)">(${target.toLocaleString()})</span></td>
+      <td>${need.toLocaleString()}</td>
+      <td>${boxes.toLocaleString()}</td>
+      <td>${favor.toLocaleString()}</td>
+      <td>${(boxes + turnins).toLocaleString()} <span style="color:var(--muted)">(${boxes.toLocaleString()} empty + ${turnins.toLocaleString()} filled)</span></td>
+      <td>${money(boxCost)}</td>
+      <td>${money(favorCost)}</td>
+      <td><b>${money(total)}</b></td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("repPlan").innerHTML =
+    `<tr><th>Target</th><th>Rep needed</th><th>Boxes</th><th>Favor needed</th>
+      <th>Crates bought</th><th>Empty-crate cost</th><th>Favor cost</th><th>Total</th></tr>` + rowsHtml;
+
+  document.getElementById("repStrategy").innerHTML =
+    `<b>Cheapest plan right now:</b> use <b style="color:${emptiest.q === "green" ? "var(--green)" : "var(--white-q)"}">${esc(crateName(emptiest.id))}</b>
+     (${money(emptiest.cratePrice.v)}) as the empty crate for each box, and earn Favor by turning in
+     <b style="color:${favorCrate.q === "green" ? "var(--green)" : "var(--white-q)"}">${esc(crateName(favorCrate.id))}</b>
+     filled with ${esc(crateName(favorCrate.cheapest.id))} ×${favorCrate.cheapest.qty}
+     — ${money(favorCrate.allIn)} per turn-in for ${favorCrate.favor} Favor
+     (${money(Math.round(favorCrate.cpf))}/Favor). Receipts unlock at Friendly (3,000), so rep up to
+     Friendly must come from Craftsman's Writs or the one-time Shipping Label quest (+2,000).
+     Turn-in silver rewards and the Performance Bonus talent (up to 15% chance of double Favor) would
+     lower real costs slightly.`;
+}
+document.getElementById("repNow").addEventListener("input", renderRepPlan);
+document.getElementById("labelQuest").addEventListener("change", renderRepPlan);
+renderRepPlan();
+
+// ---- Meta line ----
+const meta = window.PRICES_META;
+document.getElementById("meta").textContent = meta
+  ? `${meta.market} · snapshot fetched ${new Date(meta.fetched).toLocaleString()} · AH data as of ${P[248682] ? new Date(P[248682].updated).toLocaleString() : "?"}`
+  : "prices.js missing — run ./refresh-prices.sh";
+</script>
+</body>
+</html>
