@@ -17,14 +17,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Regenerate prices.js from TSM public data
-        run: ./refresh-prices.sh
+        run: ./waylaid-crates/refresh-prices.sh
 
       - name: Commit if prices changed
         run: |
           git config user.name "price-bot"
           git config user.email "actions@users.noreply.github.com"
-          if ! git diff --quiet prices.js; then
-            git add prices.js
+          if ! git diff --quiet waylaid-crates/prices.js; then
+            git add waylaid-crates/prices.js
             git commit -m "Refresh AH prices"
             git push
           else
