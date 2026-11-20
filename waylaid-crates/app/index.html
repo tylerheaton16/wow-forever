@@ -145,6 +145,20 @@
 </details>
 
 <details open>
+  <summary>Favor calculator: what does X Merchant's Favor cost?</summary>
+  <div class="note" style="margin:10px 0">
+    I want
+    <input type="number" id="favorWant" value="30" min="1" max="99999" step="5"
+      style="width:80px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 6px">
+    Merchant's Favor. Each crate below is bought empty off the AH, filled with its cheapest
+    item, and turned in. Turn-in counts round up, so the best crate for a small amount isn't
+    always the best gold-per-Favor crate.
+    <div id="favorBest" style="margin-top:8px;color:var(--text)"></div>
+  </div>
+  <div class="summary-wrap"><table class="summary" id="favorCalc"></table></div>
+</details>
+
+<details open>
   <summary>Best value: gold per Favor (crate + cheapest fill)</summary>
   <div class="summary-wrap"><table class="summary" id="summary"></table></div>
 </details>
@@ -332,6 +346,38 @@ function renderRepPlan() {
 document.getElementById("repNow").addEventListener("input", renderRepPlan);
 document.getElementById("labelQuest").addEventListener("change", renderRepPlan);
 renderRepPlan();
+
+// ---- Favor calculator ----
+function renderFavorCalc() {
+  const want = Math.max(1, Math.floor(Number(document.getElementById("favorWant").value) || 0));
+  const options = rows.filter(r => r.allIn != null).map(r => {
+    const turnins = Math.ceil(want / r.favor);
+    return { r, turnins, cost: turnins * r.allIn, got: turnins * r.favor };
+  }).sort((a, b) => a.cost - b.cost || a.got - b.got);
+  if (!options.length) {
+    document.getElementById("favorBest").textContent = "No price data.";
+    return;
+  }
+  const best = options[0];
+  const qcolor = q => q === "green" ? "var(--green)" : "var(--white-q)";
+  document.getElementById("favorBest").innerHTML =
+    `<b>Cheapest right now: ${money(best.cost)}</b> — buy and fill
+     <b style="color:${qcolor(best.r.q)}">${esc(crateName(best.r.id))}</b> ×${best.turnins}
+     (each filled with ${esc(crateName(best.r.cheapest.id))} ×${best.r.cheapest.qty}),
+     yielding ${best.got} Favor${best.got > want ? ` (${best.got - want} extra from rounding up)` : ""}.`;
+  document.getElementById("favorCalc").innerHTML =
+    `<tr><th></th><th>Crate</th><th>Favor each</th><th>Turn-ins</th><th>Favor gained</th><th>Total cost</th></tr>` +
+    options.slice(0, 5).map((o, i) => `<tr>
+      <td class="rank">${i + 1}</td>
+      <td style="color:${qcolor(o.r.q)}">${esc(crateName(o.r.id))}</td>
+      <td>${o.r.favor}</td>
+      <td>${o.turnins.toLocaleString()}</td>
+      <td>${o.got.toLocaleString()}</td>
+      <td><b>${money(o.cost)}</b></td>
+    </tr>`).join("");
+}
+document.getElementById("favorWant").addEventListener("input", renderFavorCalc);
+renderFavorCalc();
 
 // ---- Meta line ----
 const meta = window.PRICES_META;
