@@ -400,8 +400,10 @@ renderFavorCalc();
 
 // ---- Meta line ----
 const meta = window.PRICES_META;
+// timeZoneName makes the browser append its local zone (PST, EST, …)
+const fmtTime = d => new Date(d).toLocaleString(undefined, { timeZoneName: "short" });
 document.getElementById("meta").textContent = meta
-  ? `${meta.market} · snapshot fetched ${new Date(meta.fetched).toLocaleString()} · AH data as of ${P[248682] ? new Date(P[248682].updated).toLocaleString() : "?"}`
+  ? `${meta.market} · snapshot fetched ${fmtTime(meta.fetched)} · AH data as of ${P[248682] ? fmtTime(P[248682].updated) : "?"}`
   : "prices.js missing — run ./refresh-prices.sh";
 </script>
 </body>
