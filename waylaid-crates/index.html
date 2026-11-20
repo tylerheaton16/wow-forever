@@ -120,7 +120,9 @@
   beside it, then turned in to Dokimi at Durotar Supply &amp; Logistics for <b>Merchant's Favor</b>.
   Gathered-goods crates (Herbs, Ore, Textiles, Curiosities) are common quality and pay
   5 / 10 / 15 / 20 Favor by tier; crafted-goods crates (Ingots, Fabrics, Parts) are uncommon and pay
-  10 / 20 / 30 / 40. Expert and Artisan payouts are community-reported, not yet officially confirmed.
+  10 / 20 / 30 / 40. Each turn-in also refunds silver equal to half its Favor number (e.g. a
+  30-Favor crate pays 15s back), which every calculation below subtracts as a rebate.
+  Expert and Artisan payouts (Favor and silver) are community-reported, not yet officially confirmed.
   Prices are minimum buyout (market value as fallback, shown in grey). Refresh with
   <code>./refresh-prices.sh</code>.
 </div>
@@ -225,12 +227,14 @@ function price(id) { // effective price in copper: min buyout, else market value
 }
 function money(copper, cls) {
   if (copper == null) return '<span class="money na">no data</span>';
+  const neg = copper < 0 ? "−" : "";
+  copper = Math.abs(copper);
   const g = Math.floor(copper / 10000), s = Math.floor(copper % 10000 / 100), c = Math.floor(copper % 100);
   let out = "";
   if (g) out += `<span class="g">${g.toLocaleString()}g</span> `;
   if (g || s) out += `<span class="s">${s}s</span> `;
   out += `<span class="c">${c}c</span>`;
-  return `<span class="money ${cls || ""}">${out}</span>`;
+  return `<span class="money ${cls || ""}">${neg}${out}</span>`;
 }
 function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 function crateName(id) { return P[id] ? P[id].name : `Item ${id}`; }
@@ -245,20 +249,28 @@ const rows = CRATES.map(cr => {
   const priced = fills.filter(f => f.total != null);
   const cheapest = priced.length ? priced.reduce((a, b) => a.total <= b.total ? a : b) : null;
   const allIn = (cratePrice && cheapest) ? cratePrice.v + cheapest.total : null;
-  return { ...cr, cratePrice, fills, cheapest, allIn, cpf: allIn != null ? allIn / cr.favor : null };
+  // Turn-in pays silver equal to half the Favor number (50c per Favor point);
+  // Artisan rebates are pattern-projected like their Favor values.
+  const rebate = cr.favor * 50;
+  const net = allIn != null ? allIn - rebate : null;
+  return { ...cr, cratePrice, fills, cheapest, allIn, rebate, net,
+           cpf: allIn != null ? allIn / cr.favor : null,
+           netCpf: net != null ? net / cr.favor : null };
 });
 
 // ---- Render summary (gold per favor, ascending) ----
-const sorted = rows.filter(r => r.cpf != null).sort((a, b) => a.cpf - b.cpf);
+const sorted = rows.filter(r => r.netCpf != null).sort((a, b) => a.netCpf - b.netCpf);
 document.getElementById("summary").innerHTML =
-  `<tr><th></th><th>Crate</th><th>Favor</th><th>Cheapest fill</th><th>All-in cost</th><th>Cost / Favor</th></tr>` +
+  `<tr><th></th><th>Crate</th><th>Favor</th><th>Cheapest fill</th><th>All-in cost</th><th>Silver back</th><th>Net cost</th><th>Net / Favor</th></tr>` +
   sorted.map((r, i) => `<tr>
     <td class="rank">${i + 1}</td>
     <td style="color:${r.q === "green" ? "var(--green)" : "var(--white-q)"}">${esc(crateName(r.id))}</td>
     <td>${r.favor}${UNCONFIRMED_TIERS.includes(r.tier) ? "*" : ""}</td>
     <td>${r.cheapest ? esc(crateName(r.cheapest.id)) + " ×" + r.cheapest.qty : "—"}</td>
     <td>${money(r.allIn)}</td>
-    <td><b>${money(Math.round(r.cpf))}</b></td>
+    <td>${money(r.rebate)}${UNCONFIRMED_TIERS.includes(r.tier) ? "*" : ""}</td>
+    <td>${money(r.net)}</td>
+    <td><b>${money(Math.round(r.netCpf))}</b></td>
   </tr>`).join("");
 
 // ---- Render crate rows by tier ----
@@ -283,7 +295,7 @@ TIERS.forEach((tname, t) => {
         <div class="crate-price">${r.cratePrice ? money(r.cratePrice.v) : money(null)}</div>
         <div class="crate-meta">${r.cratePrice ? "crate on AH · " + r.cratePrice.src : "crate not listed"}</div>
         <div class="favor">${r.favor} Favor <small>on turn-in</small></div>
-        <div class="cpf">${r.allIn != null ? "all-in " + money(r.allIn) + " · <b>" + money(Math.round(r.cpf)) + "</b>/Favor" : ""}</div>
+        <div class="cpf">${r.allIn != null ? "all-in " + money(r.allIn) + " − " + money(r.rebate) + " back = " + money(r.net) + " · <b>" + money(Math.round(r.netCpf)) + "</b>/Favor net" : ""}</div>
       </div>
       <div class="fills">${fillsHtml}</div>`;
     sec.appendChild(div);
@@ -313,7 +325,7 @@ function renderRepPlan() {
     const boxes = Math.ceil(need / REP_PER_BOX);
     const favor = boxes * FAVOR_PER_BOX;
     const turnins = Math.ceil(favor / favorCrate.favor);
-    const favorCost = turnins * favorCrate.allIn;
+    const favorCost = turnins * favorCrate.net;
     const boxCost = boxes * emptiest.cratePrice.v;
     const total = boxCost + favorCost;
     return `<tr>
@@ -330,18 +342,18 @@ function renderRepPlan() {
 
   document.getElementById("repPlan").innerHTML =
     `<tr><th>Target</th><th>Rep needed</th><th>Boxes</th><th>Favor needed</th>
-      <th>Crates bought</th><th>Empty-crate cost</th><th>Favor cost</th><th>Total</th></tr>` + rowsHtml;
+      <th>Crates bought</th><th>Empty-crate cost</th><th>Favor cost (net)</th><th>Total</th></tr>` + rowsHtml;
 
   document.getElementById("repStrategy").innerHTML =
     `<b>Cheapest plan right now:</b> use <b style="color:${emptiest.q === "green" ? "var(--green)" : "var(--white-q)"}">${esc(crateName(emptiest.id))}</b>
      (${money(emptiest.cratePrice.v)}) as the empty crate for each box, and earn Favor by turning in
      <b style="color:${favorCrate.q === "green" ? "var(--green)" : "var(--white-q)"}">${esc(crateName(favorCrate.id))}</b>
      filled with ${esc(crateName(favorCrate.cheapest.id))} ×${favorCrate.cheapest.qty}
-     — ${money(favorCrate.allIn)} per turn-in for ${favorCrate.favor} Favor
-     (${money(Math.round(favorCrate.cpf))}/Favor). Receipts unlock at Friendly (3,000), so rep up to
-     Friendly must come from Craftsman's Writs or the one-time Shipping Label quest (+2,000).
-     Turn-in silver rewards and the Performance Bonus talent (up to 15% chance of double Favor) would
-     lower real costs slightly.`;
+     — ${money(favorCrate.allIn)} per turn-in minus ${money(favorCrate.rebate)} silver back
+     = ${money(favorCrate.net)} net for ${favorCrate.favor} Favor
+     (${money(Math.round(favorCrate.netCpf))}/Favor net). Receipts unlock at Friendly (3,000), so rep
+     up to Friendly must come from Craftsman's Writs or the one-time Shipping Label quest (+2,000).
+     The Performance Bonus talent (up to 15% chance of double Favor) would lower real costs slightly.`;
 }
 document.getElementById("repNow").addEventListener("input", renderRepPlan);
 document.getElementById("labelQuest").addEventListener("change", renderRepPlan);
@@ -352,8 +364,9 @@ function renderFavorCalc() {
   const want = Math.max(1, Math.floor(Number(document.getElementById("favorWant").value) || 0));
   const options = rows.filter(r => r.allIn != null).map(r => {
     const turnins = Math.ceil(want / r.favor);
-    return { r, turnins, cost: turnins * r.allIn, got: turnins * r.favor };
-  }).sort((a, b) => a.cost - b.cost || a.got - b.got);
+    return { r, turnins, cost: turnins * r.allIn, back: turnins * r.rebate,
+             net: turnins * r.net, got: turnins * r.favor };
+  }).sort((a, b) => a.net - b.net || a.got - b.got);
   if (!options.length) {
     document.getElementById("favorBest").textContent = "No price data.";
     return;
@@ -361,19 +374,22 @@ function renderFavorCalc() {
   const best = options[0];
   const qcolor = q => q === "green" ? "var(--green)" : "var(--white-q)";
   document.getElementById("favorBest").innerHTML =
-    `<b>Cheapest right now: ${money(best.cost)}</b> — buy and fill
+    `<b>Cheapest right now: ${money(best.net)} net</b> (${money(best.cost)} upfront,
+     ${money(best.back)} silver back at turn-in) — buy and fill
      <b style="color:${qcolor(best.r.q)}">${esc(crateName(best.r.id))}</b> ×${best.turnins}
      (each filled with ${esc(crateName(best.r.cheapest.id))} ×${best.r.cheapest.qty}),
      yielding ${best.got} Favor${best.got > want ? ` (${best.got - want} extra from rounding up)` : ""}.`;
   document.getElementById("favorCalc").innerHTML =
-    `<tr><th></th><th>Crate</th><th>Favor each</th><th>Turn-ins</th><th>Favor gained</th><th>Total cost</th></tr>` +
+    `<tr><th></th><th>Crate</th><th>Favor each</th><th>Turn-ins</th><th>Favor gained</th><th>Upfront cost</th><th>Silver back</th><th>Net cost</th></tr>` +
     options.slice(0, 5).map((o, i) => `<tr>
       <td class="rank">${i + 1}</td>
       <td style="color:${qcolor(o.r.q)}">${esc(crateName(o.r.id))}</td>
       <td>${o.r.favor}</td>
       <td>${o.turnins.toLocaleString()}</td>
       <td>${o.got.toLocaleString()}</td>
-      <td><b>${money(o.cost)}</b></td>
+      <td>${money(o.cost)}</td>
+      <td>${money(o.back)}</td>
+      <td><b>${money(o.net)}</b></td>
     </tr>`).join("");
 }
 document.getElementById("favorWant").addEventListener("input", renderFavorCalc);
